@@ -1,0 +1,1 @@
+SELECT last_name FROM sakila.actor WHERE actor_id = 2

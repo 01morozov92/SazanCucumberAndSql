@@ -1,0 +1,5 @@
+{
+  "DEVELOP": {
+    "dbAliases": "dbAliases.csv"
+  }
+}
