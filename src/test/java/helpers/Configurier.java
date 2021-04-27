@@ -1,6 +1,6 @@
 package helpers;
 
-import Exceptions.SazanException;
+import Exceptions.CustomException;
 import io.cucumber.datatable.dependency.com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +56,7 @@ public class Configurier {
                 instance = new Configurier();
                 try {
                     instance.loadApplicationPropertiesForSegment();
-                } catch (SazanException e) {
+                } catch (CustomException e) {
                     log.error(e.getMessage());
                 }
             }
@@ -72,9 +72,9 @@ public class Configurier {
 
     /**
      * @return isLoaded признак, загружены ли проперти
-     * @throws SazanException something wrong
+     * @throws CustomException something wrong
      */
-    public boolean loadApplicationPropertiesForSegment() throws SazanException {
+    public boolean loadApplicationPropertiesForSegment() throws CustomException {
         String propertyPath;
         String envPropertyPath;
         if (System.getProperty(APP_FILE_NAME) != null) {
@@ -91,7 +91,7 @@ public class Configurier {
             properties.load(fileInputStream);
         } catch (Exception e) {
             log.error("Can't load properties file: " + propertyPath, e);
-            throw new SazanException(e);
+            throw new CustomException(e);
         }
         if (properties.isEmpty()) {
             return false;
@@ -107,7 +107,7 @@ public class Configurier {
                 envProperty.putAll(confProp.get(System.getProperty(ENVIROMENT).toUpperCase()));
             } catch (Exception e) {
                 log.error("Can't load env properties file: " + envPropertyPath, e);
-                throw new SazanException(e);
+                throw new CustomException(e);
             }
         }
 

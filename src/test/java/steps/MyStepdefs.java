@@ -1,6 +1,6 @@
 package steps;
 
-import Exceptions.SazanException;
+import Exceptions.CustomException;
 import cucumber.api.Scenario;
 import cucumber.api.java.After;
 import cucumber.api.java.Before;
@@ -23,15 +23,15 @@ import testData.Templater;
 import vars.LocalThead;
 import vars.TestVars;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class MyStepdefs {
 
@@ -43,7 +43,7 @@ public class MyStepdefs {
     private static final Map<String, String> VarMemory = new HashMap<>();
 
     @Before
-    public void beforeScenario(final Scenario scenario) throws SazanException {
+    public void beforeScenario(final Scenario scenario) throws CustomException {
         TestVars testVars = new TestVars();
         LocalThead.setTestVars(testVars);
         this.scenario = scenario;
@@ -60,7 +60,7 @@ public class MyStepdefs {
 
 
     @Тогда("^Выполнить обновление БД ([^\"]*) запросом ([^\"]*)$")
-    public void makeInsertOrUpdateDB(String dbalias, String sqlrequest) throws SazanException, SQLException, ParseException, IOException, org.apache.velocity.runtime.parser.ParseException {
+    public void makeInsertOrUpdateDB(String dbalias, String sqlrequest) throws CustomException, SQLException, ParseException, IOException, org.apache.velocity.runtime.parser.ParseException {
         TestVars testVars = LocalThead.getTestVars();
         executeSqlRequestWithoutReturn(sqlrequest, testVars.getVariables(), dbalias);
     }
@@ -71,7 +71,6 @@ public class MyStepdefs {
         String messageBody = testVars.getResponse().getBody();
         testVars.setVariables(variableName, messageBody);
         LocalThead.setTestVars(testVars);
-        System.out.println(messageBody);
     }
 
     @Тогда("^Проверить содержится ли ([^\"]*) в json-теле http-сообщения ([^\"]*)")
@@ -86,7 +85,7 @@ public class MyStepdefs {
     }
 
     @Тогда("^Убедиться в наличии записей в БД ([^\"]*) по запросу ([^\"]*)$")
-    public void checkIfDbHasData(String dbAlias, String sqlrequest) throws SazanException, SQLException, org.apache.velocity.runtime.parser.ParseException, IOException {
+    public void checkIfDbHasData(String dbAlias, String sqlrequest) throws CustomException, SQLException, org.apache.velocity.runtime.parser.ParseException, IOException {
         TestVars testVars = LocalThead.getTestVars();
         testVars.setQueryResult(executeSqlRequestWithReturn(sqlrequest, testVars.getVariables(), dbAlias));
         Map<String, List<String>> queryresult = testVars.getQueryResult();
@@ -104,14 +103,56 @@ public class MyStepdefs {
     @Тогда("^Сохранить ([^\"]*) из json-тела сообщения ([^\"]*) в переменную ([^\"]*)$")
     public void saveJsonValue(String jsonPath, String messageAlias, String varname) {
         TestVars testVars = LocalThead.getTestVars();
-        String messagebody = testVars.getMessage(messageAlias).getBody();
+        String messagebody = testVars.getVariable(messageAlias);
         String jsonPathVal = getValueFromJsonPath(messagebody, jsonPath);
         testVars.setVariables(varname, jsonPathVal);
-        log.info(String.format("Variable with value %s stored to %s", jsonPathVal, varname));
+        System.out.println((String.format("Variable with value %s stored to %s", jsonPathVal, varname)));
+    }
+
+    @Тогда("^вывести в консоль переменную ([^\"]*)$")
+    public void printVar(String varname) {
+        TestVars testVars = LocalThead.getTestVars();
+        System.out.println(testVars.getVariable(varname));
+    }
+
+    @Тогда("Убедиться в истинности числового выражения (.*)")
+    public void checkEvalsTrueInt(String eval) throws ScriptException {
+        TestVars testVars = LocalThead.getTestVars();
+        String streval = eval;
+        for (String key : testVars.getVariables().keySet()) {
+            if (streval.contains(key)) {
+                streval = streval.replaceAll(key, testVars.getVariables().get(key));
+            }
+        }
+        ScriptEngineManager mgr = new ScriptEngineManager();
+        ScriptEngine engine = mgr.getEngineByName("JavaScript");
+        log.info("Checking expression: {}", streval);
+        assertTrue("Expression is false", (Boolean) engine.eval(streval));
+        LocalThead.setTestVars(testVars);
+    }
+
+    @Тогда("^Изменить значение переменной (.*) на (.*)")
+    public void changeTestVariable(String varName, String varValue) {
+        TestVars testVars = LocalThead.getTestVars();
+        if (checkVars(varValue)) {
+            varValue = replaceTestVariableValue(varValue, testVars);
+        }
+        testVars.setVariables(varName, varValue);
+        LocalThead.setTestVars(testVars);
+        replaceAllTestVariableValue();
+    }
+
+    @Тогда("Убедиться в истинности выражения ([^\"]*) == ([^\"]*)")
+    public void checkEvalsTrue(String param1, String param2) throws ScriptException {
+        TestVars testVars = LocalThead.getTestVars();
+        String parameter1 = testVars.getVariable(param1);
+        String parameter2 = testVars.getVariable(param2);
+        assertEquals("Expression is false", parameter1, parameter2);
+        LocalThead.setTestVars(testVars);
     }
 
     @Тогда("^Выполнить SQL-запрос ([^\"]*) в БД ([^\"]*) и сохранить массив в переменную ([^\"]*)$")
-    public void executeSQLqueryAndSaveMassInVal(String sqlrequest, String dbAlias, String var) throws SazanException, SQLException, org.apache.velocity.runtime.parser.ParseException, IOException {
+    public void executeSQLqueryAndSaveMassInVal(String sqlrequest, String dbAlias, String var) throws CustomException, SQLException, org.apache.velocity.runtime.parser.ParseException, IOException {
         TestVars testVars = LocalThead.getTestVars();
         testVars.setQueryResult(executeSqlRequestWithReturn(sqlrequest, testVars.getVariables(), dbAlias));
         Map<String, List<String>> queryresult = testVars.getQueryResult();
@@ -119,7 +160,7 @@ public class MyStepdefs {
             List<String> resultList = new ArrayList<>();
             for (String key : queryresult.keySet()) {
                 if (queryresult.get(key).size() < 1) {
-                    throw new SazanException("Результат выполнения скрипта выдал пустое множество");
+                    throw new CustomException("Результат выполнения скрипта выдал пустое множество");
                 }
                 resultList.add(queryresult.get(key).get(0));
             }
@@ -131,7 +172,7 @@ public class MyStepdefs {
                     String jsonVar = new Gson().toJson(queryresult.get(key));
                     testVars.setVariables(var, jsonVar);
                 } else if (queryresult.get(key).size() < 1) {
-                    throw new SazanException("Результат выполнения скрипта выдал пустое множество");
+                    throw new CustomException("Результат выполнения скрипта выдал пустое множество");
                 }
             }
         }
@@ -139,7 +180,7 @@ public class MyStepdefs {
     }
 
     @Тогда("^Послать HTTP запрос ?(.*) в эндпоинт ([^\\s]*) c дефолтными заголовками$")
-    public void sendHttp(String bodyFile, String endPoint) throws IOException, org.apache.velocity.runtime.parser.ParseException, SazanException {
+    public void sendHttp(String bodyFile, String endPoint) throws IOException, org.apache.velocity.runtime.parser.ParseException, CustomException {
         TestVars testVars = LocalThead.getTestVars();
         Message message;
         if (checkVars(endPoint)) {
@@ -162,7 +203,7 @@ public class MyStepdefs {
     }
 
     @Тогда("^Послать HTTP запрос ?(.*) в эндпоинт ([^\\s]*)$")
-    public void sendHttp(String bodyFile, String endPoint, DataTable dataTable) throws IOException, org.apache.velocity.runtime.parser.ParseException, SazanException {
+    public void sendHttp(String bodyFile, String endPoint, DataTable dataTable) throws IOException, org.apache.velocity.runtime.parser.ParseException, CustomException {
         TestVars testVars = LocalThead.getTestVars();
         Message message;
         if (checkVars(endPoint)) {
@@ -185,18 +226,18 @@ public class MyStepdefs {
     }
 
     @Тогда("^Выполнить SQL-запрос ([^\"]*) в БД ([^\"]*) и сохранить значение ячейки в переменную ([^\"]*)$")
-    public void executeSQLqueryAndSaveVal(String sqlrequest, String dbAlias, String var) throws SazanException, SQLException, org.apache.velocity.runtime.parser.ParseException, IOException {
+    public void executeSQLqueryAndSaveVal(String sqlrequest, String dbAlias, String var) throws CustomException, SQLException, org.apache.velocity.runtime.parser.ParseException, IOException {
         TestVars testVars = LocalThead.getTestVars();
         testVars.setQueryResult(executeSqlRequestWithReturn(sqlrequest, testVars.getVariables(), dbAlias));
         Map<String, List<String>> queryresult = testVars.getQueryResult();
         if (queryresult.keySet().size() > 1) {
-            throw new SazanException("Результат выполнения скрипта выдал больше одного столбца. Невозможно сохранить в переменную");
+            throw new CustomException("Результат выполнения скрипта выдал больше одного столбца. Невозможно сохранить в переменную");
         } else {
             for (String key : queryresult.keySet()) {
                 if (queryresult.get(key).size() > 1) {
-                    throw new SazanException("Результат выполнения скрипта выдал больше одной строки. Невозможно сохранить в переменную");
+                    throw new CustomException("Результат выполнения скрипта выдал больше одной строки. Невозможно сохранить в переменную");
                 } else if (queryresult.get(key).size() < 1) {
-                    throw new SazanException("Результат выполнения скрипта выдал пустое множество");
+                    throw new CustomException("Результат выполнения скрипта выдал пустое множество");
                 } else {
                     testVars.setVariables(var, queryresult.get(key).get(0));
                 }
@@ -205,7 +246,18 @@ public class MyStepdefs {
         System.out.println((String.format("Variable %s stored with value %s", var, testVars.getVariables().get(var))));
     }
 
+    public void replaceAllTestVariableValue() {
+        TestVars testVars = LocalThead.getTestVars();
+        for (Map.Entry entry : testVars.getVariables().entrySet()) {
+            if (Objects.nonNull(VarMemory.get(entry.getKey())) && VarMemory.get(entry.getKey()).contains("$")) {
+                testVars.setVariables(entry.getKey().toString(), replaceTestVariableValue(VarMemory.get(entry.getKey()), testVars));
+            }
+        }
+        LocalThead.setTestVars(testVars);
+    }
+
     private String getValueFromJsonPath(String jsonmessage, String jsonPath) {
+        JSONObject jsonObject1 = null;
         JSONObject jsonObject = new JSONObject(jsonmessage);
         if (jsonPath.contains("[")) {
             JSONObject jsonObjectData = new JSONObject();
@@ -233,6 +285,20 @@ public class MyStepdefs {
                 }
             }
             return jsonObject.get(jsonPathsArr[jsonPathsArr.length - 1]).toString();
+        } else if (jsonPath.contains(":")) {
+            String[] jsonPaths = jsonPath.split(":");
+            for (int i = 0; i < jsonPaths.length - 1; i++) {
+                try {
+                    String newJsonPath = jsonObject.get(jsonPaths[i]).toString();
+                    String res1 = newJsonPath.replace("[", "");
+                    String res2 = res1.replace("]", "");
+                    jsonObject1 = new JSONObject(res2);
+//                    jsonObject = (JSONObject) jsonObject.get(jsonPaths[i]);
+                } catch (JSONException e) {
+                    return "NOCURRENTKEY";
+                }
+            }
+            return jsonObject1.get(jsonPaths[jsonPaths.length - 1]).toString();
         } else {
             String jsonPaths[] = jsonPath.split(":");
             for (int i = 0; i < jsonPaths.length - 1; i++) {
@@ -250,16 +316,16 @@ public class MyStepdefs {
         return entry.contains("$") ? true : false;
     }
 
-    private void executeSqlRequestWithoutReturn(String sqlFile, Map<String, String> templateParam, String dbalias) throws ParseException, IOException, SazanException, SQLException, org.apache.velocity.runtime.parser.ParseException {
+    private void executeSqlRequestWithoutReturn(String sqlFile, Map<String, String> templateParam, String dbalias) throws ParseException, IOException, CustomException, SQLException, org.apache.velocity.runtime.parser.ParseException {
         String lines = new PrepareBody(this.scenario.getUri().replaceFirst(FILE, ""), sqlFile).loadBody();
-        //lines возвращает путь до файла типа стринг C:\Users\MI\IdeaProjects\sazan_core/src/test/resources/features/test/sql/okr/PskToPdn/insertWave.sql  .
+        //lines возвращает путь до файла типа стринг C:\Users\MI\IdeaProjects\sazan_core/src/test/resources/features/test/sql/okr/PskToPdn/GetLastNameByActorId.sql  .
         String filledTempl = new Templater(lines, templateParam).fillTemplate(); //заполняется шаблон из предыстории и подставляется в sql запрос на место переменных
         System.out.println(String.format("Executing SQL Query: %s", filledTempl));
         StatementExecute exec = new StatementExecute();
         exec.executeUpdateOrInsertSQLQuery(configer.getApplicationProperties(), filledTempl, dbalias);
     }
 
-    private Map<String, List<String>> executeSqlRequestWithReturn(String sqlFile, Map<String, String> templateParam, String dbalias) throws org.apache.velocity.runtime.parser.ParseException, IOException, SazanException, SQLException {
+    private Map<String, List<String>> executeSqlRequestWithReturn(String sqlFile, Map<String, String> templateParam, String dbalias) throws org.apache.velocity.runtime.parser.ParseException, IOException, CustomException, SQLException {
         String lines = new PrepareBody(this.scenario.getUri().replaceFirst(FILE, ""), sqlFile).loadBody();
         String filledTempl = new Templater(lines, templateParam).fillTemplate();
         System.out.println(String.format("Executing SQL Query: %s", filledTempl));

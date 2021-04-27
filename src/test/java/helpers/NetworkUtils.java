@@ -1,6 +1,6 @@
 package helpers;
 
-import Exceptions.SazanException;
+import Exceptions.CustomException;
 import messages.HttpMessage;
 import messages.Message;
 
@@ -11,7 +11,7 @@ import java.net.URLConnection;
 
 public class NetworkUtils {
 
-    public static HttpMessage sendHttp(Message message, String endpoint) throws SazanException {
+    public static HttpMessage sendHttp(Message message, String endpoint) throws CustomException {
         try {
 
             URL url = new URL(endpoint.trim());
@@ -40,7 +40,7 @@ public class NetworkUtils {
             return responseMessage;
 
         } catch (IOException e) {
-            throw new SazanException(e.getMessage());
+            throw new CustomException(e.getMessage());
         }
 
     }

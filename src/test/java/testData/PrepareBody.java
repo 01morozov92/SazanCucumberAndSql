@@ -1,6 +1,6 @@
 package testData;
 
-import Exceptions.SazanException;
+import Exceptions.CustomException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,17 +28,17 @@ public class PrepareBody {
             bld.append(pathPart[i]);
             bld.append(SLESH);
         }
-        this.filePath = bld.append(this.fileName).toString(); //this.fileName = sql/okr/PskToPdn/insertWave.sql
+        this.filePath = bld.append(this.fileName).toString(); //this.fileName = sql/okr/PskToPdn/GetLastNameByActorId.sql
         //bld = C:\Users\MI\IdeaProjects\sazan_core/src/test/resources/features/test/
     }
 
-    public String loadBody() throws IOException, SazanException {
+    public String loadBody() throws IOException, CustomException {
         cutPath();
         if (!Paths.get(this.filePath).toFile().exists()) {//если файл не найден то бросается исключение
-            throw new SazanException(String.format("File not found: %s", this.filePath));
+            throw new CustomException(String.format("File not found: %s", this.filePath));
         }
         return new String(Files.readAllBytes(Paths.get(this.filePath)), StandardCharsets.UTF_8);
-        //return = C:\Users\MI\IdeaProjects\sazan_core/src/test/resources/features/test/sql/okr/PskToPdn/insertWave.sql
+        //return = C:\Users\MI\IdeaProjects\sazan_core/src/test/resources/features/test/sql/okr/PskToPdn/GetLastNameByActorId.sql
     }
 
     public String getFilePath() {

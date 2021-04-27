@@ -1,6 +1,6 @@
 package dbConnector;
 
-import Exceptions.SazanException;
+import Exceptions.CustomException;
 import helpers.Configurier;
 import helpers.DBAliases;
 import helpers.DBAliasesNames;
@@ -78,7 +78,7 @@ public class StatementExecute {
         return stringBuilder.toString();
     }
 
-    public Map<String, List<String>> executeSQLQueryNew(Map<String, String> property, String body, String dbAlias) throws SQLException, SazanException, IOException {
+    public Map<String, List<String>> executeSQLQueryNew(Map<String, String> property, String body, String dbAlias) throws SQLException, CustomException, IOException {
         String response = "";
         DBAliases.getInstance().loadApplicationPropertiesForSegment(Configurier.getInstance().getAppProp("db.aliases"));
         DBAliasesNames dbConnectData = DBAliases.getInstance().getValue(dbAlias);
@@ -94,7 +94,7 @@ public class StatementExecute {
         return doSelect(property, body);//body = SELECT max(wave_id) FROM WAVE
     }
 
-    private Map<String, List<String>> doSelect(Map<String, String> property, String body) throws SQLException, SazanException {
+    private Map<String, List<String>> doSelect(Map<String, String> property, String body) throws SQLException, CustomException {
         log.trace("Try get connection");
         Connection connection = getConnection(property);
         log.trace("Try create statement");
@@ -105,16 +105,16 @@ public class StatementExecute {
         return result;
     }
 
-    private Map<String, List<String>> executeSelect(final String sqlQuery, final boolean firstOnly, Statement statement) throws SazanException {
+    private Map<String, List<String>> executeSelect(final String sqlQuery, final boolean firstOnly, Statement statement) throws CustomException {
         //Пришлось разделить вызовы для санчеза и jdbc т.к. ojdbc не поддерживает result.first()
          if (Configurier.getInstance().getAppProp("db.driver.type").contains("jdbc")) {
             return executeSelectJDBC(sqlQuery, firstOnly, statement);
         } else {
-            throw new SazanException("No driver type found");
+            throw new CustomException("No driver type found");
         }
     }
 
-    private Map<String, List<String>> executeSelectJDBC(final String sqlQuery, final boolean firstOnly, Statement statement) throws SazanException {
+    private Map<String, List<String>> executeSelectJDBC(final String sqlQuery, final boolean firstOnly, Statement statement) throws CustomException {
         final Map<String, List<String>> resultMap = new HashMap<>();
         try (ResultSet result = statement.executeQuery(sqlQuery)) {
             final ResultSetMetaData md = result.getMetaData();
@@ -140,7 +140,7 @@ public class StatementExecute {
             }
         } catch (final SQLException cause) {
             log.error("Error :: {}", cause);
-            throw new SazanException(String.format("Невозможно выполнить запрос. Текст запроса:'%s'.", sqlQuery), cause);
+            throw new CustomException(String.format("Невозможно выполнить запрос. Текст запроса:'%s'.", sqlQuery), cause);
         }
         return resultMap;
     }

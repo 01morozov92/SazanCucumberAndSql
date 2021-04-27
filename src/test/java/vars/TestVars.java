@@ -26,7 +26,7 @@ public class TestVars {
 
     public TestVars() {
         //Comment for Sonar, explaining why this method is empty. Its empty because I decided it to be
-    }
+        }
 
     public void setResponse(Message response) {
         this.response = response;
@@ -38,6 +38,10 @@ public class TestVars {
 
     public Message getResponse() {
         return response;
+    }
+
+    public String getVariable(String key){
+        return variables.get(key);
     }
 
     public Map<String, String> getVariables() {
